@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Project } from "../types";
 import { Icon } from "./Icon";
 import { TrackCard } from "./TrackCard";
@@ -28,6 +28,29 @@ export function TrackSection({
   const scrollBy = (delta: number) => {
     trackRef.current?.scrollBy({ left: delta, behavior: "smooth" });
   };
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      if (event.deltaY === 0) return;
+      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+
+      const maxScroll = track.scrollWidth - track.clientWidth;
+      if (maxScroll <= 0) return;
+
+      const atStart = track.scrollLeft <= 0 && event.deltaY < 0;
+      const atEnd = track.scrollLeft >= maxScroll && event.deltaY > 0;
+      if (atStart || atEnd) return;
+
+      event.preventDefault();
+      track.scrollLeft = Math.max(0, Math.min(maxScroll, track.scrollLeft + event.deltaY));
+    };
+
+    track.addEventListener("wheel", handleWheel, { passive: false });
+    return () => track.removeEventListener("wheel", handleWheel);
+  }, []);
 
   return (
     <div
