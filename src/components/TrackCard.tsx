@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Project } from "../types";
 import { AvatarStack } from "./AvatarStack";
 import { ProgressRing } from "./ProgressRing";
@@ -15,7 +16,9 @@ const priorityDot: Record<Project["priority"], string> = {
 };
 
 export function TrackCard({ project, onOpen }: TrackCardProps) {
+  const [dragging, setDragging] = useState(false);
   const isLab = project.domain === "lab";
+  const itemCount = isLab ? project.drafts.length : project.tasks.length;
 
   return (
     <div
@@ -23,10 +26,22 @@ export function TrackCard({ project, onOpen }: TrackCardProps) {
         isLab
           ? "bg-surface-container-lowest hover:bg-emerald-50/25 border-emerald-900/15 hover:border-emerald-500"
           : "bg-surface-container-lowest hover:bg-slate-50 border-surface-container-highest hover:border-slate-400"
-      }`}
+      } ${dragging ? "opacity-50" : ""}`}
       onClick={() => onOpen(project)}
       role="button"
       tabIndex={0}
+      title={isLab ? "Drag onto WORK to promote this project" : undefined}
+      draggable={isLab}
+      onDragStart={
+        isLab
+          ? (event) => {
+              event.dataTransfer.effectAllowed = "move";
+              event.dataTransfer.setData("text/plain", project.id);
+              setDragging(true);
+            }
+          : undefined
+      }
+      onDragEnd={isLab ? () => setDragging(false) : undefined}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -63,7 +78,20 @@ export function TrackCard({ project, onOpen }: TrackCardProps) {
             {isLab ? `${project.tag} • sandbox` : project.tag}
           </span>
         </div>
-        <ProgressRing progress={project.progress} tone={isLab ? "emerald" : "blue"} />
+
+        {isLab ? (
+          <div className="flex items-center gap-1">
+            <span className="font-label-specs text-[9px] px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono font-semibold">
+              {project.drafts.length} DRAFTS
+            </span>
+            <Icon
+              name="drag_indicator"
+              className="text-[12px] text-emerald-700/60 opacity-0 group-hover:opacity-100 transition-opacity"
+            />
+          </div>
+        ) : (
+          <ProgressRing progress={project.progress} tone="blue" />
+        )}
       </div>
 
       <div className="my-auto py-1">
@@ -97,7 +125,7 @@ export function TrackCard({ project, onOpen }: TrackCardProps) {
             className={`text-[14px] ${isLab ? "text-emerald-700" : "text-outline"}`}
           />
           <span className={`text-[11px] ${isLab ? "text-emerald-800 font-medium" : "font-medium"}`}>
-            {project.tasks.length} {isLab ? "directives" : "tasks"}
+            {itemCount} {isLab ? "drafts" : "tasks"}
           </span>
         </div>
         <AvatarStack colors={project.assignees} />

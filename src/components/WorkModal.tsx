@@ -1,11 +1,11 @@
 import { useState } from "react";
 import type { DragEvent } from "react";
-import type { Project, Task, TaskStatus } from "../types";
+import type { TaskStatus, WorkProject, WorkTask } from "../types";
 import { AvatarStack } from "./AvatarStack";
 import { Icon } from "./Icon";
 
 interface WorkModalProps {
-  project: Project;
+  project: WorkProject;
   onClose: () => void;
   onCycleTask: (taskId: string) => void;
   onMoveTask: (taskId: string, status: TaskStatus) => void;
@@ -215,7 +215,7 @@ export function WorkModal({
 }
 
 interface TaskTileProps {
-  task: Task;
+  task: WorkTask;
   onCycle: () => void;
   onDragStart: (event: DragEvent<HTMLDivElement>) => void;
   onDragEnd: () => void;

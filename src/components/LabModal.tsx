@@ -1,30 +1,30 @@
 import { useState } from "react";
-import type { Project } from "../types";
+import type { LabProject } from "../types";
 import { Icon } from "./Icon";
 
 interface LabModalProps {
-  project: Project;
+  project: LabProject;
   onClose: () => void;
-  onToggleTask: (taskId: string) => void;
-  onDeleteTask: (taskId: string) => void;
-  onAddDirective: (title: string) => void;
+  onDeleteDraft: (draftId: string) => void;
+  onAddDraft: (title: string) => void;
+  onPromote: () => void;
 }
 
 export function LabModal({
   project,
   onClose,
-  onToggleTask,
-  onDeleteTask,
-  onAddDirective,
+  onDeleteDraft,
+  onAddDraft,
+  onPromote,
 }: LabModalProps) {
-  const [draft, setDraft] = useState("");
-  const doneCount = project.tasks.filter((task) => task.status === "done").length;
+  const [draftTitle, setDraftTitle] = useState("");
+  const hasDrafts = project.drafts.length > 0;
 
   const submit = () => {
-    const value = draft.trim();
+    const value = draftTitle.trim();
     if (!value) return;
-    onAddDirective(value);
-    setDraft("");
+    onAddDraft(value);
+    setDraftTitle("");
   };
 
   return (
@@ -53,7 +53,7 @@ export function LabModal({
                 </span>
                 <span className="w-1 h-1 rounded-full bg-outline" />
                 <span className="font-label-specs text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono uppercase border border-emerald-200 font-semibold">
-                  LAB EXPERIMENT
+                  LAB DRAFT
                 </span>
               </div>
               <h3 className="font-headline-sm text-xl text-primary tracking-tight font-bold mt-0.5">
@@ -74,14 +74,12 @@ export function LabModal({
           <div className="flex items-center gap-space-lg text-on-surface-variant">
             <div className="flex items-center gap-1.5">
               <span className="text-outline">RUN HYPOTHESIS:</span>
-              <span className="text-primary font-mono font-medium">
-                {project.hypothesis || "Deterministic heuristic exploration"}
-              </span>
+              <span className="text-primary font-mono font-medium">{project.hypothesis}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-outline">COMPLETED:</span>
+              <span className="text-outline">DRAFTS:</span>
               <span className="text-emerald-700 font-mono font-bold">
-                {doneCount} / {project.tasks.length} Checkpoints
+                {project.drafts.length} entries
               </span>
             </div>
           </div>
@@ -96,10 +94,10 @@ export function LabModal({
             <Icon name="add_circle" className="text-[18px] text-emerald-600 ml-1" />
             <input
               className="flex-1 bg-transparent text-primary text-body-md placeholder:text-outline focus:outline-none font-body-md"
-              placeholder="Add experiment step, hypothesis checkpoint, or telemetry probe..."
+              placeholder="Add a draft task for this experiment..."
               type="text"
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
+              value={draftTitle}
+              onChange={(event) => setDraftTitle(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") submit();
               }}
@@ -109,97 +107,90 @@ export function LabModal({
               onClick={submit}
               type="button"
             >
-              + Insert Directive
+              + Add Draft
             </button>
           </div>
 
           <div className="flex flex-col gap-2">
-            {project.tasks.map((task, index) => {
-              const isCompleted = task.status === "done";
-              return (
-                <div
-                  key={task.id}
-                  className={`p-3 rounded-lg flex items-start gap-3 transition-all duration-150 border ${
-                    isCompleted
-                      ? "bg-emerald-50/50 border-emerald-200/80 opacity-85"
-                      : "bg-surface-container-lowest hover:bg-slate-50 border-surface-container-highest shadow-xs"
-                  }`}
-                >
-                  <button
-                    type="button"
-                    className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center border transition-all ${
-                      isCompleted
-                        ? "bg-emerald-600 text-surface-container-lowest border-emerald-600"
-                        : "border-slate-300 hover:border-emerald-600 text-transparent hover:text-emerald-400 bg-surface-container-lowest"
-                    }`}
-                    onClick={() => onToggleTask(task.id)}
-                    aria-label="Toggle directive"
-                  >
-                    <Icon name="check" className="text-[16px] font-bold" />
-                  </button>
+            {project.drafts.map((draft, index) => (
+              <div
+                key={draft.id}
+                className="p-3 rounded-lg flex items-start gap-3 bg-surface-container-lowest hover:bg-slate-50 border border-surface-container-highest shadow-xs transition-colors"
+              >
+                <div className="mt-0.5 w-5 h-5 rounded flex items-center justify-center border border-emerald-200 bg-emerald-50 text-emerald-700 font-mono text-[10px] font-bold">
+                  {String(index + 1).padStart(2, "0")}
+                </div>
 
-                  <div className="flex-1 flex flex-col gap-0.5">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`font-mono text-[10px] px-1.5 py-0.5 rounded uppercase font-bold ${
-                          isCompleted
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-surface-container text-on-surface-variant"
-                        }`}
-                      >
-                        {task.tag || "EXP"}
-                      </span>
-                      <span className="font-mono text-[10px] text-outline">
-                        STEP 0{index + 1}
-                      </span>
-                      <span className="w-1 h-1 rounded-full bg-outline/40" />
-                      <span className="font-mono text-[10px] text-emerald-700 font-semibold">
-                        {isCompleted ? "VERIFIED" : "ACTIVE PROBE"}
-                      </span>
-                    </div>
-
-                    <p
-                      className={`font-body-md text-sm leading-normal mt-0.5 ${
-                        isCompleted ? "line-through text-outline" : "text-primary font-medium"
-                      }`}
-                    >
-                      {task.title}
-                    </p>
-
-                    {task.note && (
-                      <div className="flex items-center gap-1.5 text-xs font-mono text-outline mt-1 pl-2 border-l border-emerald-600/30">
-                        <Icon name="sticky_note_2" className="text-[13px] text-emerald-700" />
-                        <span>{task.note}</span>
-                      </div>
-                    )}
+                <div className="flex-1 flex flex-col gap-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant uppercase font-bold">
+                      {draft.tag || "DRAFT"}
+                    </span>
+                    <span className="font-mono text-[10px] text-outline">
+                      DRAFT 0{index + 1}
+                    </span>
+                    <span className="w-1 h-1 rounded-full bg-outline/40" />
+                    <span className="font-mono text-[10px] text-emerald-700 font-semibold">
+                      NOT PROMOTED
+                    </span>
                   </div>
 
-                  <button
-                    type="button"
-                    className="text-outline hover:text-error transition-colors p-1"
-                    title="Remove directive"
-                    onClick={() => onDeleteTask(task.id)}
-                  >
-                    <Icon name="delete" className="text-[16px]" />
-                  </button>
+                  <p className="font-body-md text-sm text-primary font-medium leading-normal mt-0.5">
+                    {draft.title}
+                  </p>
+
+                  {draft.note && (
+                    <div className="flex items-center gap-1.5 text-xs font-mono text-outline mt-1 pl-2 border-l border-emerald-600/30">
+                      <Icon name="sticky_note_2" className="text-[13px] text-emerald-700" />
+                      <span>{draft.note}</span>
+                    </div>
+                  )}
                 </div>
-              );
-            })}
+
+                <button
+                  type="button"
+                  className="text-outline hover:text-error transition-colors p-1"
+                  title="Remove draft"
+                  onClick={() => onDeleteDraft(draft.id)}
+                >
+                  <Icon name="delete" className="text-[16px]" />
+                </button>
+              </div>
+            ))}
+
+            {!hasDrafts && (
+              <div className="p-6 rounded-lg border border-dashed border-surface-container-highest bg-surface-container-lowest text-center">
+                <p className="font-label-specs text-xs text-outline font-mono">
+                  NO DRAFTS YET — ADD THE FIRST TASK DRAFT ABOVE
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="px-space-lg py-space-sm bg-surface-container-low flex items-center justify-between font-label-specs text-xs text-outline border-t border-surface-container-highest">
+        <div className="px-space-lg py-space-sm bg-surface-container-low flex flex-wrap items-center justify-between gap-space-sm font-label-specs text-xs text-outline border-t border-surface-container-highest">
           <div className="flex items-center gap-space-xs font-mono text-emerald-800 font-medium">
-            <Icon name="verified" className="text-[15px]" />
-            <span>AUTONOMOUS EXPERIMENT LOG ACTIVE</span>
+            <Icon name="edit_note" className="text-[15px]" />
+            <span>DRAFT LIST — PROMOTE TO WORK WHEN READY</span>
           </div>
-          <button
-            className="px-space-md py-1.5 rounded bg-emerald-700 text-surface-container-lowest font-label-ui text-xs font-semibold hover:bg-emerald-800 transition-colors shadow-xs"
-            onClick={onClose}
-            type="button"
-          >
-            Done
-          </button>
+          <div className="flex items-center gap-space-sm">
+            <button
+              className="flex items-center gap-1.5 px-space-md py-1.5 rounded bg-primary text-surface-container-lowest font-label-ui text-xs font-semibold hover:bg-slate-800 transition-colors shadow-xs disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary"
+              onClick={onPromote}
+              disabled={!hasDrafts}
+              type="button"
+            >
+              <Icon name="upgrade" className="text-[15px]" />
+              Promote to Work
+            </button>
+            <button
+              className="px-space-md py-1.5 rounded bg-emerald-700 text-surface-container-lowest font-label-ui text-xs font-semibold hover:bg-emerald-800 transition-colors shadow-xs"
+              onClick={onClose}
+              type="button"
+            >
+              Done
+            </button>
+          </div>
         </div>
       </div>
     </div>

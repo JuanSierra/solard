@@ -1,17 +1,11 @@
 import { useState } from "react";
-import type { Discipline, Domain, Stage } from "../types";
+import type { Discipline, Domain, NewProjectInput, Stage } from "../types";
 import { Icon } from "./Icon";
 
 interface CreateProjectModalProps {
   scope: Domain;
   onClose: () => void;
-  onCreate: (project: {
-    title: string;
-    code: string;
-    domain: Domain;
-    tag: Discipline;
-    stage: Stage;
-  }) => void;
+  onCreate: (project: NewProjectInput) => void;
 }
 
 const domainLabels: Record<Domain, string> = {
@@ -41,11 +35,18 @@ export function CreateProjectModal({ scope, onClose, onCreate }: CreateProjectMo
   const submit = () => {
     const prefix = domain === "work" ? "WRK" : "LAB";
     const generatedCode = `${prefix}-${Math.floor(Math.random() * 89 + 10)}`;
+    const titleValue = title.trim() || "Obsidian Mesh";
+    const codeValue = code.trim().toUpperCase() || generatedCode;
+
+    if (domain === "lab") {
+      onCreate({ title: titleValue, code: codeValue, domain: "lab", tag: discipline });
+      return;
+    }
 
     onCreate({
-      title: title.trim() || "Obsidian Mesh",
-      code: code.trim().toUpperCase() || generatedCode,
-      domain,
+      title: titleValue,
+      code: codeValue,
+      domain: "work",
       tag: discipline,
       stage,
     });
@@ -123,7 +124,7 @@ export function CreateProjectModal({ scope, onClose, onCreate }: CreateProjectMo
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-space-sm">
+        <div className={`grid gap-space-sm ${domain === "lab" ? "grid-cols-1" : "grid-cols-2"}`}>
           <div className="flex flex-col gap-space-xs">
             <label className="font-label-specs text-xs uppercase tracking-wider text-on-surface-variant">
               Discipline
@@ -140,22 +141,24 @@ export function CreateProjectModal({ scope, onClose, onCreate }: CreateProjectMo
               ))}
             </select>
           </div>
-          <div className="flex flex-col gap-space-xs">
-            <label className="font-label-specs text-xs uppercase tracking-wider text-on-surface-variant">
-              Initial Phase
-            </label>
-            <select
-              className="px-space-sm py-2 rounded bg-surface-container-low text-primary font-label-specs text-xs focus:outline-none border border-surface-container-highest"
-              value={stage}
-              onChange={(event) => setStage(event.target.value as Stage)}
-            >
-              {(Object.keys(stageLabels) as Stage[]).map((value) => (
-                <option key={value} value={value}>
-                  {stageLabels[value]}
-                </option>
-              ))}
-            </select>
-          </div>
+          {domain === "work" && (
+            <div className="flex flex-col gap-space-xs">
+              <label className="font-label-specs text-xs uppercase tracking-wider text-on-surface-variant">
+                Initial Phase
+              </label>
+              <select
+                className="px-space-sm py-2 rounded bg-surface-container-low text-primary font-label-specs text-xs focus:outline-none border border-surface-container-highest"
+                value={stage}
+                onChange={(event) => setStage(event.target.value as Stage)}
+              >
+                {(Object.keys(stageLabels) as Stage[]).map((value) => (
+                  <option key={value} value={value}>
+                    {stageLabels[value]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-space-sm pt-space-xs">

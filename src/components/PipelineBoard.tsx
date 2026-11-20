@@ -1,39 +1,35 @@
 import { useState } from "react";
-import type { Project, Stage } from "../types";
+import type { Stage, WorkProject } from "../types";
 import { Icon } from "./Icon";
 import { PipelineCard } from "./PipelineCard";
 
 interface PipelineBoardProps {
-  projects: Project[];
-  onOpen: (project: Project) => void;
+  projects: WorkProject[];
+  onOpen: (project: WorkProject) => void;
   onMoveStage: (projectId: string, stage: Stage) => void;
 }
 
 const stageColumns: {
   key: Stage;
   label: string;
-  row: string;
   count: string;
   dot: string;
 }[] = [
   {
     key: "backlog",
     label: "BACKLOG",
-    row: "BACKLOG",
     count: "text-outline",
     dot: "bg-slate-400",
   },
   {
     key: "active",
     label: "ACTIVE SPRINTS",
-    row: "ACTIVE SPRINTS",
     count: "text-blue-700",
     dot: "bg-blue-600 animate-pulse",
   },
   {
     key: "maint",
     label: "MAINTENANCE",
-    row: "MAINTENANCE",
     count: "text-emerald-800",
     dot: "bg-emerald-600",
   },

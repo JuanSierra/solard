@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
-  Discipline,
   Filter,
+  LabProject,
   ModalState,
+  NewProjectInput,
   Project,
   Stage,
-  Task,
   TaskStatus,
+  WorkProject,
+  WorkTask,
 } from "./types";
+import { isLabProject, isWorkProject } from "./types";
 import { initialProjects } from "./data";
 import { Header } from "./components/Header";
 import { TrackSection } from "./components/TrackSection";
@@ -16,7 +19,7 @@ import { WorkModal } from "./components/WorkModal";
 import { LabModal } from "./components/LabModal";
 import { CreateProjectModal } from "./components/CreateProjectModal";
 
-function computeProgress(tasks: Task[], fallback: number) {
+function computeProgress(tasks: WorkTask[], fallback: number) {
   if (tasks.length === 0) return fallback;
   const done = tasks.filter((task) => task.status === "done").length;
   const doing = tasks.filter((task) => task.status === "doing").length;
@@ -29,19 +32,35 @@ function nextStatus(status: TaskStatus): TaskStatus {
   return "todo";
 }
 
+function promoteToWork(project: LabProject): WorkProject {
+  const tasks: WorkTask[] = project.drafts.map((draft) => ({
+    id: draft.id,
+    title: draft.title,
+    status: "todo",
+    tag: draft.tag,
+  }));
+
+  return {
+    id: project.id,
+    code: project.code,
+    title: project.title,
+    tag: project.tag,
+    priority: project.priority,
+    assignees: project.assignees,
+    domain: "work",
+    pipelineStage: "backlog",
+    progress: computeProgress(tasks, 0),
+    tasks,
+  };
+}
+
 export default function App() {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [filter, setFilter] = useState<Filter>("all");
   const [modal, setModal] = useState<ModalState>(null);
 
-  const workProjects = useMemo(
-    () => projects.filter((project) => project.domain === "work"),
-    [projects],
-  );
-  const labProjects = useMemo(
-    () => projects.filter((project) => project.domain === "lab"),
-    [projects],
-  );
+  const workProjects = useMemo(() => projects.filter(isWorkProject), [projects]);
+  const labProjects = useMemo(() => projects.filter(isLabProject), [projects]);
 
   const visibleProjects = useMemo(
     () => projects.filter((project) => filter === "all" || project.tag === filter),
@@ -65,9 +84,10 @@ export default function App() {
 
   const moveStage = useCallback(
     (projectId: string, stage: Stage) => {
-      updateProject(projectId, (project) =>
-        project.pipelineStage === stage ? project : { ...project, pipelineStage: stage },
-      );
+      updateProject(projectId, (project) => {
+        if (!isWorkProject(project) || project.pipelineStage === stage) return project;
+        return { ...project, pipelineStage: stage };
+      });
     },
     [updateProject],
   );
@@ -75,6 +95,7 @@ export default function App() {
   const setTaskStatus = useCallback(
     (projectId: string, taskId: string, status: TaskStatus) => {
       updateProject(projectId, (project) => {
+        if (!isWorkProject(project)) return project;
         const tasks = project.tasks.map((task) =>
           task.id === taskId ? { ...task, status } : task,
         );
@@ -87,6 +108,7 @@ export default function App() {
   const cycleTask = useCallback(
     (projectId: string, taskId: string) => {
       updateProject(projectId, (project) => {
+        if (!isWorkProject(project)) return project;
         const target = project.tasks.find((task) => task.id === taskId);
         if (!target) return project;
         const tasks = project.tasks.map((task) =>
@@ -101,7 +123,8 @@ export default function App() {
   const addTask = useCallback(
     (projectId: string, title: string) => {
       updateProject(projectId, (project) => {
-        const tasks: Task[] = [
+        if (!isWorkProject(project)) return project;
+        const tasks: WorkTask[] = [
           ...project.tasks,
           {
             id: `t-${Date.now()}`,
@@ -116,73 +139,94 @@ export default function App() {
     [updateProject],
   );
 
-  const addDirective = useCallback(
+  const addDraft = useCallback(
     (projectId: string, title: string) => {
       updateProject(projectId, (project) => {
-        const tasks: Task[] = [
-          ...project.tasks,
-          {
-            id: `t-lab-${Date.now()}`,
-            title,
-            status: "todo",
-            tag: "DIRECTIVE",
-            note: "Experimental telemetry captured",
-          },
-        ];
-        return { ...project, tasks, progress: computeProgress(tasks, project.progress) };
+        if (!isLabProject(project)) return project;
+        return {
+          ...project,
+          drafts: [
+            ...project.drafts,
+            { id: `d-${Date.now()}`, title, tag: "DRAFT" },
+          ],
+        };
       });
     },
     [updateProject],
   );
 
-  const deleteTask = useCallback(
-    (projectId: string, taskId: string) => {
+  const deleteDraft = useCallback(
+    (projectId: string, draftId: string) => {
       updateProject(projectId, (project) => {
-        const tasks = project.tasks.filter((task) => task.id !== taskId);
-        return { ...project, tasks, progress: computeProgress(tasks, project.progress) };
+        if (!isLabProject(project)) return project;
+        return {
+          ...project,
+          drafts: project.drafts.filter((draft) => draft.id !== draftId),
+        };
       });
     },
     [updateProject],
   );
 
-  const createProject = useCallback(
-    (input: {
-      title: string;
-      code: string;
-      domain: "work" | "lab";
-      tag: Discipline;
-      stage: Stage;
-    }) => {
-      const project: Project = {
-        id: `prj-${Date.now()}`,
+  const promoteLab = useCallback((projectId: string) => {
+    setProjects((previous) =>
+      previous.map((project) =>
+        project.id === projectId && isLabProject(project)
+          ? promoteToWork(project)
+          : project,
+      ),
+    );
+    setModal((current) => (current?.kind === "lab" ? null : current));
+  }, []);
+
+  const createProject = useCallback((input: NewProjectInput) => {
+    const id = `prj-${Date.now()}`;
+
+    if (input.domain === "work") {
+      const tasks: WorkTask[] = [
+        {
+          id: `t-${Date.now()}`,
+          title: "Initialize architecture repo",
+          status: "todo",
+          tag: "INIT",
+        },
+      ];
+      const project: WorkProject = {
+        id,
         code: input.code,
         title: input.title,
         tag: input.tag,
-        domain: input.domain,
-        pipelineStage: input.stage,
         priority: "high",
-        progress: 0,
-        hypothesis:
-          input.domain === "lab" ? "Hypothetical runtime validation" : undefined,
-        assignees: input.domain === "lab" ? ["#059669", "#0f172a"] : ["#2563eb", "#64748b"],
-        tasks: [
+        assignees: ["#2563eb", "#64748b"],
+        domain: "work",
+        pipelineStage: input.stage,
+        progress: computeProgress(tasks, 0),
+        tasks,
+      };
+      setProjects((previous) => [project, ...previous]);
+    } else {
+      const project: LabProject = {
+        id,
+        code: input.code,
+        title: input.title,
+        tag: input.tag,
+        priority: "high",
+        assignees: ["#059669", "#0f172a"],
+        domain: "lab",
+        hypothesis: "Hypothetical runtime validation",
+        drafts: [
           {
-            id: `t-${Date.now()}`,
-            title:
-              input.domain === "lab"
-                ? "Initialize experimental matrix"
-                : "Initialize architecture repo",
-            status: "todo",
+            id: `d-${Date.now()}`,
+            title: "Initialize experimental matrix",
             tag: "INIT",
           },
         ],
       };
-
       setProjects((previous) => [project, ...previous]);
-      setModal(null);
-    },
-    [],
-  );
+    }
+
+    setModal(null);
+  }, []);
 
   useEffect(() => {
     if (!modal) return;
@@ -207,14 +251,15 @@ export default function App() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-space-md">
             <TrackSection
               domain="work"
-              projects={visibleProjects.filter((project) => project.domain === "work")}
+              projects={visibleProjects.filter(isWorkProject)}
               totalCount={workProjects.length}
               onOpen={openProject}
               onAdd={() => setModal({ kind: "create", scope: "work" })}
+              onDropProject={promoteLab}
             />
             <TrackSection
               domain="lab"
-              projects={visibleProjects.filter((project) => project.domain === "lab")}
+              projects={visibleProjects.filter(isLabProject)}
               totalCount={labProjects.length}
               onOpen={openProject}
               onAdd={() => setModal({ kind: "create", scope: "lab" })}
@@ -222,14 +267,14 @@ export default function App() {
           </div>
 
           <PipelineBoard
-            projects={visibleProjects}
+            projects={visibleProjects.filter(isWorkProject)}
             onOpen={openProject}
             onMoveStage={moveStage}
           />
         </div>
       </main>
 
-      {modal?.kind === "work" && activeProject && (
+      {modal?.kind === "work" && activeProject && isWorkProject(activeProject) && (
         <WorkModal
           project={activeProject}
           onClose={() => setModal(null)}
@@ -239,21 +284,13 @@ export default function App() {
         />
       )}
 
-      {modal?.kind === "lab" && activeProject && (
+      {modal?.kind === "lab" && activeProject && isLabProject(activeProject) && (
         <LabModal
           project={activeProject}
           onClose={() => setModal(null)}
-          onToggleTask={(taskId) =>
-            setTaskStatus(
-              activeProject.id,
-              taskId,
-              activeProject.tasks.find((task) => task.id === taskId)?.status === "done"
-                ? "todo"
-                : "done",
-            )
-          }
-          onDeleteTask={(taskId) => deleteTask(activeProject.id, taskId)}
-          onAddDirective={(title) => addDirective(activeProject.id, title)}
+          onDeleteDraft={(draftId) => deleteDraft(activeProject.id, draftId)}
+          onAddDraft={(title) => addDraft(activeProject.id, title)}
+          onPromote={() => promoteLab(activeProject.id)}
         />
       )}
 

@@ -1,6 +1,6 @@
-import type { Project } from "./types";
+import type { LabProject, Project, WorkProject } from "./types";
 
-export const initialProjects: Project[] = [
+const workProjects: WorkProject[] = [
   {
     id: "prj-01",
     code: "QN-01",
@@ -112,43 +112,40 @@ export const initialProjects: Project[] = [
       { id: "t-902", title: "B-Tree node balancing audit", status: "doing", tag: "AUDIT" },
     ],
   },
+];
+
+const labProjects: LabProject[] = [
   {
     id: "prj-08",
     code: "NRL-05",
     title: "Neural Graph",
     tag: "ai",
     domain: "lab",
-    pipelineStage: "active",
     hypothesis: "Heuristic sparse activation on INT4 layers",
     priority: "high",
-    progress: 68,
     assignees: ["#059669", "#2563eb", "#0f172a"],
-    tasks: [
+    drafts: [
       {
-        id: "t-501",
+        id: "d-501",
         title: "Prune dense tensor weights via L1 norm",
-        status: "todo",
         tag: "TENSOR",
         note: "Alpha threshold set to 0.04",
       },
       {
-        id: "t-502",
+        id: "d-502",
         title: "KV cache memory compaction in vLLM",
-        status: "doing",
         tag: "MEM",
         note: "PagedAttention allocation overhead",
       },
       {
-        id: "t-503",
+        id: "d-503",
         title: "Inference stream warmup across multi-GPU nodes",
-        status: "doing",
         tag: "KERN",
         note: "NCCL all-reduce barrier test",
       },
       {
-        id: "t-504",
+        id: "d-504",
         title: "Quantization INT4 regression validation",
-        status: "done",
         tag: "BENCH",
         note: "Perplexity delta within 0.12%",
       },
@@ -160,23 +157,19 @@ export const initialProjects: Project[] = [
     title: "Fluid Shader",
     tag: "interface",
     domain: "lab",
-    pipelineStage: "backlog",
     hypothesis: "2D Navier-Stokes computed in WebGPU compute shader",
     priority: "medium",
-    progress: 35,
     assignees: ["#2563eb"],
-    tasks: [
+    drafts: [
       {
-        id: "t-401",
+        id: "d-401",
         title: "Navier-Stokes grid mapping onto ping-pong textures",
-        status: "todo",
         tag: "GLSL",
         note: "Float32 buffer support required",
       },
       {
-        id: "t-402",
+        id: "d-402",
         title: "Surface tension refraction & caustics shader pass",
-        status: "done",
         tag: "MATH",
         note: "Snell law approximation confirmed",
       },
@@ -188,23 +181,19 @@ export const initialProjects: Project[] = [
     title: "Graphite V8",
     tag: "ai",
     domain: "lab",
-    pipelineStage: "maint",
     hypothesis: "Zero-copy typed array interchange for WASM microthreads",
     priority: "low",
-    progress: 92,
     assignees: ["#0f172a"],
-    tasks: [
+    drafts: [
       {
-        id: "t-1001",
+        id: "d-1001",
         title: "Garbage collector pause tracing under extreme memory load",
-        status: "done",
         tag: "RUNTIME",
         note: "P99 pause reduced to 1.1ms",
       },
       {
-        id: "t-1002",
+        id: "d-1002",
         title: "JIT deoptimization bailouts telemetry harness",
-        status: "done",
         tag: "OPT",
         note: "Bailout frequency dropped below 0.01%",
       },
@@ -216,23 +205,19 @@ export const initialProjects: Project[] = [
     title: "Photon Diffuse",
     tag: "engine",
     domain: "lab",
-    pipelineStage: "backlog",
     hypothesis: "Ray-traced irradiance cache with spatio-temporal reservoir",
     priority: "high",
-    progress: 20,
     assignees: ["#059669", "#2563eb"],
-    tasks: [
+    drafts: [
       {
-        id: "t-1101",
+        id: "d-1101",
         title: "Monte Carlo path tracing sample jitter sequence",
-        status: "todo",
         tag: "RAY",
         note: "Halton low-discrepancy sequence",
       },
       {
-        id: "t-1102",
+        id: "d-1102",
         title: "Blue-noise sample sequence generation table",
-        status: "doing",
         tag: "MATH",
         note: "64x64 precalculated matrix",
       },
@@ -244,26 +229,24 @@ export const initialProjects: Project[] = [
     title: "Bio-Kinetic UI",
     tag: "interface",
     domain: "lab",
-    pipelineStage: "maint",
     hypothesis: "Dynamic muscle-spring velocity model for kinetic drag",
     priority: "medium",
-    progress: 50,
     assignees: ["#0f172a", "#059669"],
-    tasks: [
+    drafts: [
       {
-        id: "t-1201",
+        id: "d-1201",
         title: "Inertial gesture decay physics equation solver",
-        status: "done",
         tag: "PHY",
         note: "Underdamped harmonic oscillator",
       },
       {
-        id: "t-1202",
+        id: "d-1202",
         title: "Spring-damper micro-curves touch release feel",
-        status: "todo",
         tag: "UX",
         note: "User test session scheduled",
       },
     ],
   },
 ];
+
+export const initialProjects: Project[] = [...workProjects, ...labProjects];

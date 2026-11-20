@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { Project } from "../types";
 import { Icon } from "./Icon";
 import { TrackCard } from "./TrackCard";
@@ -9,6 +9,7 @@ interface TrackSectionProps {
   totalCount: number;
   onOpen: (project: Project) => void;
   onAdd: () => void;
+  onDropProject?: (projectId: string) => void;
 }
 
 export function TrackSection({
@@ -17,9 +18,12 @@ export function TrackSection({
   totalCount,
   onOpen,
   onAdd,
+  onDropProject,
 }: TrackSectionProps) {
   const trackRef = useRef<HTMLDivElement>(null);
+  const [isDropTarget, setIsDropTarget] = useState(false);
   const isLab = domain === "lab";
+  const acceptsDrop = Boolean(onDropProject);
 
   const scrollBy = (delta: number) => {
     trackRef.current?.scrollBy({ left: delta, behavior: "smooth" });
@@ -27,11 +31,43 @@ export function TrackSection({
 
   return (
     <div
-      className={`flex flex-col min-w-0 rounded-xl p-space-sm shadow-xs overflow-hidden ${
+      className={`flex flex-col min-w-0 rounded-xl p-space-sm shadow-xs overflow-hidden transition-colors ${
         isLab
           ? "bg-surface-container-low/75 border border-emerald-900/10 relative"
-          : "bg-surface-container-low/75 border border-surface-container-highest"
+          : `bg-surface-container-low/75 border ${
+              isDropTarget
+                ? "border-emerald-400 bg-emerald-50/40"
+                : "border-surface-container-highest"
+            }`
       }`}
+      onDragOver={
+        acceptsDrop
+          ? (event) => {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              setIsDropTarget(true);
+            }
+          : undefined
+      }
+      onDragLeave={
+        acceptsDrop
+          ? (event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                setIsDropTarget(false);
+              }
+            }
+          : undefined
+      }
+      onDrop={
+        acceptsDrop
+          ? (event) => {
+              event.preventDefault();
+              setIsDropTarget(false);
+              const projectId = event.dataTransfer.getData("text/plain");
+              if (projectId) onDropProject?.(projectId);
+            }
+          : undefined
+      }
     >
       {isLab && (
         <div className="absolute -top-12 -right-12 w-28 h-28 bg-emerald-100 rounded-full blur-2xl pointer-events-none opacity-60" />
@@ -57,8 +93,12 @@ export function TrackSection({
               EXPERIMENTAL
             </span>
           ) : (
-            <span className="text-[10px] text-outline font-mono hidden sm:inline ml-1">
-              PRODUCTION PIPELINE
+            <span
+              className={`text-[10px] font-mono hidden sm:inline ml-1 ${
+                isDropTarget ? "text-emerald-700 font-semibold" : "text-outline"
+              }`}
+            >
+              {isDropTarget ? "DROP TO PROMOTE → BACKLOG" : "PRODUCTION PIPELINE"}
             </span>
           )}
         </div>

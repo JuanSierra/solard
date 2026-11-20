@@ -10,27 +10,66 @@ export type Priority = "high" | "medium" | "low";
 
 export type Filter = "all" | Discipline;
 
-export interface Task {
+export interface WorkTask {
   id: string;
   title: string;
   status: TaskStatus;
   tag: string;
+}
+
+export interface LabDraft {
+  id: string;
+  title: string;
+  tag: string;
   note?: string;
 }
 
-export interface Project {
+interface ProjectBase {
   id: string;
   code: string;
   title: string;
   tag: Discipline;
-  domain: Domain;
-  pipelineStage: Stage;
   priority: Priority;
-  progress: number;
   assignees: string[];
-  tasks: Task[];
-  hypothesis?: string;
 }
+
+export interface WorkProject extends ProjectBase {
+  domain: "work";
+  pipelineStage: Stage;
+  progress: number;
+  tasks: WorkTask[];
+}
+
+export interface LabProject extends ProjectBase {
+  domain: "lab";
+  hypothesis: string;
+  drafts: LabDraft[];
+}
+
+export type Project = WorkProject | LabProject;
+
+export function isWorkProject(project: Project): project is WorkProject {
+  return project.domain === "work";
+}
+
+export function isLabProject(project: Project): project is LabProject {
+  return project.domain === "lab";
+}
+
+export type NewProjectInput =
+  | {
+      title: string;
+      code: string;
+      domain: "work";
+      tag: Discipline;
+      stage: Stage;
+    }
+  | {
+      title: string;
+      code: string;
+      domain: "lab";
+      tag: Discipline;
+    };
 
 export type ModalState =
   | { kind: "work"; projectId: string }
